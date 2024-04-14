@@ -49,6 +49,15 @@ with DAG('user_automation',
     streaming_task >> upload_task >> image_upload
 
 
+with DAG('testing_operations',
+         default_args=default_args,
+         schedule_interval='@daily',
+         catchup=False) as test:
 
+    test_oper = PythonOperator(
+        task_id='testing_operations',
+        python_callable=stream_data_json,
+        dag=test
+    )
 
 
