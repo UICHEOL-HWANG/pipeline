@@ -75,6 +75,10 @@ instance/
 # Sphinx documentation
 docs/_build/
 
+dags/config/access_key.json
+dags/config/cookie_config.json
+dags/config/header_config.json
+
 # PyBuilder
 .pybuilder/
 target/

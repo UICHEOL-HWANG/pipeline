@@ -10,6 +10,8 @@ apache-airflow-providers-imap==3.3.1
 apache-airflow-providers-sqlite==3.4.3
 apispec==6.3.0
 argcomplete==3.1.1
+pandas==2.0.3
+numpy==1.24.4
 asgiref==3.7.2
 async-timeout==4.0.3
 attrs==23.1.0

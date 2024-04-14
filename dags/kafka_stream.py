@@ -1,46 +1,34 @@
 from datetime import datetime
-from airflow import DAG
-import requests
-import json
 from kafka import KafkaProducer
-import json
-
 import time
 import logging
+import json
 
-from config.formatt import *
-from config.requests import *
+from config.requests_data import *
 
-default_args = {
-    'owner': 'airscholar',
-    'start_date': datetime(2024, 4, 10, 23, 00)
-}
 
-def stream_data():
+# Module concats
+links = GetBookItems()
 
-    producer = KafkaProducer(bootstrap_servers=['broker:29092'], max_block_ms=5000)
+def stream_data_json():
+    producer = KafkaProducer(
+        bootstrap_servers=['broker:29092'],
+        max_block_ms=5000,
+        value_serializer= lambda x: json.dumps(x).encode('utf-8')
+    )
     curr_time = time.time()
 
-    while True:
-        if time.time() > curr_time + 60: #1 minute
+    for pages in range(1,4):
+        if time.time() > curr_time + 60:
             break
-        try:
-            res = get_data()
-            res = format_data(res)
-
-            producer.send('users_created', json.dumps(res).encode('utf-8'))
-        except Exception as e:
+        try :
+            data = links.get_data(pages, 50, '004', 2015, 'A')  # 데이터 가져오기, 이 부분은 데이터 구조에 맞게 수정 필요
+            producer.send('book_json_data',data)
+        except Exception as e :
             logging.error(f'An error occured: {e}')
             continue
 
+if __name__ == "__main__":
+    stream_data_json()
 
 
-with DAG('user_automation',
-         default_args=default_args,
-         schedule_interval='@daily',
-         catchup=False) as dag:
-
-    streaming_task = PythonOperator(
-        task_id='stream_data_from_api',
-        python_callable=stream_data
-    )
