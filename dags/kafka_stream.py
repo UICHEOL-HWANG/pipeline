@@ -1,41 +1,49 @@
+# library
 from datetime import datetime
 from kafka import KafkaProducer
 import time
 import logging
 import json
+import pandas as pd
 
-from config.requests_data import *
+# Modules
+from config.parsing_request import Yes24Scraper
+from config.requests_urls import collect_links
 
-
-# Module concats
-links = GetBookItems()
+# logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def stream_data_json():
+
     producer = KafkaProducer(
         bootstrap_servers=['broker:29092'],
         max_block_ms=5000,
         value_serializer= lambda x: json.dumps(x).encode('utf-8')
     )
+
     curr_time = time.time()
+    url_data = pd.concat(collect_links())
 
-    for years in range(2014,2025): # 년도
-        for pages in range(1,5): # 50개씩 보기는 4페이지까지만 제공
-            if time.time() > curr_time + 60:
-                break
-            try:
-                data = links.get_data(pages, 50, '004', years, 'A')['data']['bestSeller']  # 데이터 가져오기, 이 부분은 데이터 구조에 맞게 수정 필요
-                for item in data:
-                    if 'productInfo' in item:
+    for idx, row in enumerate(url_data['links']):
 
-                        producer.send('book_product_info',item['productInfo'])
+        if time.time() > curr_time + 60:
+            break
 
-                        tmp_dict = {key: value for key, value in item.items() if key != 'productInfo'} # json parse 2중 작업으로 인해 분리
-                        producer.send('book_other_data',tmp_dict)
+        try:
 
-                        time.sleep(3) # 추출 간격 조정
-            except Exception as e:
-                logging.error(f'An error occured: {e}')
-                continue
+            data = Yes24Scraper(f"https://www.yes24.com{row[idx]}").get_all_info()
+            print(f"현재 {idx}번째 순환중, {row} 링크 탐색중...")
+            future = producer.send('book_product_json', data)
+            future.get(timeout=10) # kafka 전송이 성공했는지 확인
+            time.sleep(3)
+
+        except Exception as e:
+            logging.error(f'An error occured: {e}')
+            continue
+        except IndexError as i:
+            logging.error(f'An Index Errors{i}')
+            pass
+    producer.close()
 
 if __name__ == "__main__":
     stream_data_json()

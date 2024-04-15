@@ -7,6 +7,9 @@ import json
 import pandas as pd
 import logging
 import requests
+from urllib.parse import urlparse, unquote
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
 def consumer_to_image_gcp(max_messages=100):
@@ -27,7 +30,7 @@ def consumer_to_image_gcp(max_messages=100):
                 break
             for tp, messages in msg_pack.items():
                 for message in messages:
-                    tmp_df = pd.DataFrame(message.value['data']['bestSeller'])
+                    tmp_df = pd.DataFrame([message.value])
                     data_lst.append(tmp_df)
     finally:
         consumer.close()
@@ -38,20 +41,21 @@ def consumer_to_image_gcp(max_messages=100):
 
 def upload_to_gcp():
     data = consumer_to_image_gcp()
+    bucket_name = 'book_pipeline'
 
-    buckect_name = 'book_pipeline'
+    for idx, row in data.iterrows():
+        image_url = row['image']
+        response = requests.get(image_url)
+        # URL에서 파일 이름 추출
+        parsed_url = urlparse(image_url)
+        blob_name = f'years_image/{row["title"]}_{unquote(parsed_url.path.split("/")[-1])}'
 
-    for idx,row in data.iterrows():
-        image_url = f'https://contents.kyobobook.co.kr/sih/fit-in/300x0/pdt/{row["cmdtCode"]}.jpg'
-        data = requests.get(image_url)
-        blob_name = f'years_image/{row["cmdtCode"]}.jpg'
-        uploader = UploadToCloud(buckect_name,blob_name,data.content)
+        uploader = UploadToCloud(bucket_name, blob_name, response.content)
         try:
-          uploader.upload_to_bytesfile()
+            uploader.upload_to_bytesfile()
         except Exception as e:
-            logging.error(f'An error occured: {e}')
+            logging.error(f'An error occurred: {e}')
             continue
-
 
 if __name__ == "__main__":
     upload_to_gcp()

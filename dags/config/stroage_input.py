@@ -10,7 +10,7 @@ class UploadToCloud:
     """
     GCP upload용 클래스
     """
-    def __init__(self,bucket_name : str ,blob_name : str ,data : dict):
+    def __init__(self, bucket_name : str, blob_name : str, data : dict):
         """
         :param bucket_name: 버킷네임 필수 지정 요망
         :param blob_name: 버킷 내에서 어떤 디렉토리 경로 / 파일이름으로 저장할지 선정
@@ -38,10 +38,10 @@ class UploadToCloud:
         blob.upload_from_file(stream, content_type='application/json')
         print(f"{self.blob_name} has been uploaded to {self.bucket_name}")
     def upload_to_bytesfile(self):
+
         """
         :return: 이미지 파일 업로드 때 사용
         """
-
         if not isinstance(self.data, bytes):
             raise ValueError("Data must be bytes.")
         # 예외 조건 이미지가 아닌 경우 raise 오류로 인한 처리
